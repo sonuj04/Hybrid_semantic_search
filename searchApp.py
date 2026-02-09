@@ -75,18 +75,22 @@ def main():
 
             st.subheader("Search Results")
             for result in results:
+                source = result.get("_source", {})
                 with st.container():
-                    if '_source' in result:
-                        try:
-                            st.header(f"{result['_source']['ProductName']}")
-                        except Exception as e:
-                            print(e)
-                        
-                        try:
-                            st.write(f"Description: {result['_source']['Description']}")
-                        except Exception as e:
-                            print(e)
-                        st.divider()
+        
+                    st.subheader(source.get("ProductName", "Unknown Product"))
+
+                    st.markdown(
+                        f"""
+                        **Brand:** {source.get("ProductBrand", "N/A")}  
+                        **Price:** ₹{source.get("Price (INR)", "N/A")}  
+                        **Gender:** {source.get("Gender", "N/A")}
+                        """
+                    )
+
+                    st.write(source.get("Description", "No description available"))
+
+                    st.divider()
 
                     
 if __name__ == "__main__":
