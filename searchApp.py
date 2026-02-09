@@ -35,7 +35,12 @@ except ConnectionError as e:
     print("Connection Error:", e)
     
 
+import time
+
+
 def search(input_keyword):
+
+    start_time = time.time()    
     global model
     if model is None:
         model = load_embedding_model()
@@ -60,9 +65,10 @@ def search(input_keyword):
             "Gender"
         ]
     )
+    latency = time.time() - start_time
     results = res["hits"]["hits"]
 
-    return results
+    return results,latency
 
 def main():
     st.title("Search Fashion Products")
@@ -92,8 +98,8 @@ def main():
     # Button
     if st.button("Search"):
         if search_query:
-            results = search(search_query)
-
+            results,latency = search(search_query)
+            st.caption(f"Search time: {latency*1000:.2f} ms")
 
             filtered_results = []
 
