@@ -37,17 +37,26 @@ else:
 
 
 def search(input_keyword):
-    vector_of_input_keyword = model.encode(input_keyword)
+    vector_of_input_keyword = model.encode(
+        input_keyword,
+        normalize_embeddings=True
+    )
 
     res = es.search(
         index="all_products",
         knn={
             "field": "DescriptionVector",
             "query_vector": vector_of_input_keyword,
-            "k": 2,
+            "k": 5,
             "num_candidates": 500
         },
-    _source=["ProductName", "Description"]
+    _source=[
+            "ProductName",
+            "Description",
+            "ProductBrand",
+            "Price (INR)",
+            "Gender"
+        ]
     )
     results = res["hits"]["hits"]
 
@@ -56,16 +65,14 @@ def search(input_keyword):
 def main():
     st.title("Search Fashion Products")
 
-    # Input: User enters search query
+    #senter search query
     search_query = st.text_input("Enter your search query")
 
-    # Button: User triggers the search
+    # Button
     if st.button("Search"):
         if search_query:
-            # Perform the search and get results
             results = search(search_query)
 
-            # Display search results
             st.subheader("Search Results")
             for result in results:
                 with st.container():
