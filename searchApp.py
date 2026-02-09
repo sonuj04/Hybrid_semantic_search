@@ -2,13 +2,20 @@ import streamlit as st
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 
+@st.cache_resource
+def load_embedding_model():
+    print("loading model")
+    return SentenceTransformer("all-mpnet-base-v2")
+
+model = load_embedding_model()
+
 indexName = "all_products"
 
 try:
     from dotenv import load_dotenv
     import os
 
-    load_dotenv()  # reads .env into environment
+    load_dotenv()  
 
     es = Elasticsearch(
         os.environ["ES_URL"],
@@ -30,7 +37,6 @@ else:
 
 
 def search(input_keyword):
-    model = SentenceTransformer('all-mpnet-base-v2')
     vector_of_input_keyword = model.encode(input_keyword)
 
     res = es.search(
