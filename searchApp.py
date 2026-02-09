@@ -4,10 +4,9 @@ from sentence_transformers import SentenceTransformer
 
 @st.cache_resource
 def load_embedding_model():
-    print("loading model")
     return SentenceTransformer("all-mpnet-base-v2")
 
-model = load_embedding_model()
+model = None
 
 st.set_page_config(
     page_title="Fashion Semantic Search",
@@ -35,15 +34,11 @@ try:
 except ConnectionError as e:
     print("Connection Error:", e)
     
-if es.ping():
-    print("Successfully connected to ElasticSearch!!")
-else:
-    print("Oops!! Can not connect to Elasticsearch!")
-
-
-
 
 def search(input_keyword):
+    global model
+    if model is None:
+        model = load_embedding_model()
     vector_of_input_keyword = model.encode(
         input_keyword,
         normalize_embeddings=True
