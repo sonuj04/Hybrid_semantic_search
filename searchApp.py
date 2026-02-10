@@ -1,6 +1,10 @@
 import streamlit as st
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
+import time
+from dotenv import load_dotenv
+import os
+
 
 @st.cache_resource
 def load_embedding_model():
@@ -18,8 +22,6 @@ st.set_page_config(
 indexName = "all_products"
 
 try:
-    from dotenv import load_dotenv
-    import os
 
     load_dotenv()  
 
@@ -35,10 +37,8 @@ except ConnectionError as e:
     print("Connection Error:", e)
     
 
-import time
 
-
-def search(input_keyword):
+def search(input_keyword,gender_filter,max_price):
 
     start_time = time.time()    
     global model
@@ -49,15 +49,63 @@ def search(input_keyword):
         normalize_embeddings=True
     )
 
+    # res = es.search(
+    #     index="all_products",
+    #     knn={
+    #         "field": "DescriptionVector",
+    #         "query_vector": vector_of_input_keyword,
+    #         "k": 5,
+    #         "num_candidates": 500
+    #     },
+    # _source=[
+    #         "ProductName",
+    #         "Description",
+    #         "ProductBrand",
+    #         "Price (INR)",
+    #         "Gender"
+    #     ]
+    # )
+
+    filters = []   #building filters
+
+    if gender_filter != "ALL":
+        filters.append({"term": {"Gender": gender_filter}})
+
+    filters.append({
+        "range": {
+            "Price (INR)": {
+                "lte": max_price
+            }
+        }
+    })
+
     res = es.search(
         index="all_products",
+        query={
+            "bool": {
+                "must": [
+                    {
+                        "multi_match": {
+                            "query": input_keyword,
+                            "fields": [
+                                "ProductName^2",
+                                "Description",
+                                "ProductBrand",
+                                "Gender"
+                            ]
+                        }
+                    }
+                ],
+                "filter": filters
+            }
+        },
         knn={
             "field": "DescriptionVector",
             "query_vector": vector_of_input_keyword,
-            "k": 5,
-            "num_candidates": 500
+            "k": 10,
+            "num_candidates": 1000
         },
-    _source=[
+        _source=[
             "ProductName",
             "Description",
             "ProductBrand",
@@ -65,6 +113,9 @@ def search(input_keyword):
             "Gender"
         ]
     )
+
+
+
     latency = time.time() - start_time
     results = res["hits"]["hits"]
 
@@ -73,7 +124,7 @@ def search(input_keyword):
 def main():
     st.title("Search Fashion Products")
 
-    #senter search query
+    #enter search query
     search_query = st.text_input(
         "Search your fave fashion products",
         placeholder="e.g. black dress for women under 2000"
@@ -98,30 +149,17 @@ def main():
     # Button
     if st.button("Search"):
         if search_query:
-            results,latency = search(search_query)
+            results,latency = search(search_query,gender_filter,max_price)
             st.caption(f"Search time: {latency*1000:.2f} ms")
 
-            filtered_results = []
-
-            for result in results:
-                src = result.get("_source", {})
-
-
-                if gender_filter != "All" and src.get("Gender") != gender_filter:
-                    continue
-
-
-                if src.get("Price (INR)", 0) > max_price:
-                    continue
-
-                filtered_results.append(result)
+            
 
 
             st.subheader("Search Results")
-            if not filtered_results:
+            if not results:
                 st.warning("No products matched your filters :()")
             else:
-                for result in filtered_results:
+                for result in results:
                     source = result.get("_source", {})
                     with st.container():
             
