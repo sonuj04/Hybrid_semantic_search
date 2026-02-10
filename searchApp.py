@@ -21,7 +21,6 @@ def get_es_client():
         ca_certs=os.environ["ES_CA_CERT"]
     )
 
-model = None
 
 st.set_page_config(
     page_title="Fashion Semantic Search",
@@ -40,7 +39,7 @@ es = get_es_client()
 def search(input_keyword,gender_filter,max_price):
 
     start_time = time.time()    
-    global model
+    
     if model is None:
         model = load_embedding_model()
     vector_of_input_keyword = model.encode(
