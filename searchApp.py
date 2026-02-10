@@ -4,11 +4,22 @@ from sentence_transformers import SentenceTransformer
 import time
 from dotenv import load_dotenv
 import os
-
+load_dotenv() 
 
 @st.cache_resource
 def load_embedding_model():
     return SentenceTransformer("all-mpnet-base-v2")
+
+@st.cache_resource
+def get_es_client():
+    return Elasticsearch(
+        os.environ["ES_URL"],
+        basic_auth=(
+            os.environ["ES_USERNAME"],
+            os.environ["ES_PASSWORD"],
+        ),
+        ca_certs=os.environ["ES_CA_CERT"]
+    )
 
 model = None
 
@@ -21,20 +32,8 @@ st.set_page_config(
 
 indexName = "all_products"
 
-try:
-
-    load_dotenv()  
-
-    es = Elasticsearch(
-        os.environ["ES_URL"],
-        basic_auth=(
-            os.environ["ES_USERNAME"],
-            os.environ["ES_PASSWORD"]
-        ),
-        ca_certs=os.environ["ES_CA_CERT"]
-    )
-except ConnectionError as e:
-    print("Connection Error:", e)
+ 
+es = get_es_client()
     
 
 
@@ -48,23 +47,6 @@ def search(input_keyword,gender_filter,max_price):
         input_keyword,
         normalize_embeddings=True
     )
-
-    # res = es.search(
-    #     index="all_products",
-    #     knn={
-    #         "field": "DescriptionVector",
-    #         "query_vector": vector_of_input_keyword,
-    #         "k": 5,
-    #         "num_candidates": 500
-    #     },
-    # _source=[
-    #         "ProductName",
-    #         "Description",
-    #         "ProductBrand",
-    #         "Price (INR)",
-    #         "Gender"
-    #     ]
-    # )
 
     filters = []   #building filters
 

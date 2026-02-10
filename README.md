@@ -1,4 +1,4 @@
-# Semantic Search Engine (Elasticsearch + NLP)
+# Semantic Search Engine 
 
 A semantic search engine that retrieves relevant products based on meaning rather than just exact keyword matches. Traditional keyword search fails when users describe products differently than how they're listed. This engine uses Hybrid BM25 + kNN retrieval with smart filter first architecture for somewhat production scale performance.
 
