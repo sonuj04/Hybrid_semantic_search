@@ -17,6 +17,8 @@ A semantic search engine that retrieves relevant products based on meaning rathe
 - Combines exact matching with vector similarity.
 - Secure credential handling using environment variables
 - Efficient querying on large datasets
+- Clean FastAPI REST API
+- Modular Architecture with separation of concerns
 
 
 
