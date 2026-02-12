@@ -4,10 +4,12 @@ A semantic search engine that retrieves relevant products based on meaning rathe
 
 ## Tech Stack
 - Python
-- Elasticsearch
-- Sentence Transformers (SBERT)
-- Pandas
+- FastAPI
+- Elasticsearch 8.x
+- SentenceTransformers
 - Streamlit
+- Pydantic
+- Uvicorn
 
 ## Features
 - SBERT embeddings capture meaning, not just keywords
@@ -21,38 +23,27 @@ A semantic search engine that retrieves relevant products based on meaning rathe
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────┐
-│            Layer 1: Offline Ingestion              │
-│                (indexData.ipynb)                   │
-│                                                    │
-│  CSV → Cleaning → Embeddings → Bulk Indexing → ES  │
-│                                                    │
-│  • SentenceTransformer (used once offline)         │
-│  • Bulk indexing for efficiency                    │
-│  • Dense vector storage (DescriptionVector)        │
-│                                                    │
-│  WHY OFFLINE? Embedding generation is expensive    │
-│               Data doesn't change per query        │
-│               Keeps online search fast             │
-└────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│                   Frontend (streamlit ui)             │
+│                                                       │
+└───────────────────────────────────────────────────────┘
                               ↓
-┌────────────────────────────────────────────────────┐
-│              Layer 2: Retrieval Layer              │
-│                     (searchApp.py)                 │
-│                                                    │
-│  User Query → Encode → Filters → ES Hybrid Search  │
-│                                                    │
-│  HYBRID RETRIEVAL STRATEGY:                        │
-│  • BM25: Exact keywords, brands, attributes        │
-│  • kNN: Semantic intent, paraphrases, vague queries│
-│  • Filters (Gender, Price): Applied FIRST in ES    |
-│  Order: Filters → Relevance → Ranking              │
-└────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│              Backend(fastAPI API Layer)               │
+│                                                       │
+│search logic + embedding model + elasticsearch client  │
+│                                                       │
+└───────────────────────────────────────────────────────┘
                               ↓
-┌────────────────────────────────────────────────────┐
-│             Layer 3: UI Layer                      │
-│           (searchApp.py - Streamlit)               │
-└────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│                     Search layer                      │
+│              (elasticsearch embeddings)               │
+└───────────────────────────────────────────────────────┘
+                              ↓
+┌───────────────────────────────────────────────────────┐
+│   Data (embedding generation using bulk indexing)     │
+│     (indexed vectors from ingestion pipeline)         │
+└───────────────────────────────────────────────────────┘
 ```
 
 
@@ -67,6 +58,9 @@ cd semantic_search
 
 # Install Dependencies
 ```
+cd backend
+pip install -r requirements.txt
+cd ../frontend
 pip install -r requirements.txt
 ```
 
@@ -95,13 +89,20 @@ ES_CA_CERT=/path/to/http_ca.crt
 ## Data Indexing (One-Time Setup)
 
 ```bash
-# Run the indexing pipeline
+cd ingestion
 jupyter notebook indexData.ipynb
 ```
 
-### Run the Application
+### Run Backend
 
 ```bash
+cd backend
+uvicorn app.main:app --reload
+```
+
+### Run Frontend
+```bash
+cd frontend
 streamlit run searchApp.py
 ```
 
@@ -109,15 +110,3 @@ Open your browser to `http://localhost:8501`
 
 ---
 
-
-## Roadmap
-
-- [ ] Add support for image search (CLIP embeddings)
-- [ ] Implement query expansion for better recall
-- [ ] Add A/B testing framework for ranking experiments
-- [ ] Multi-language support
-- [ ] Redis caching for frequent queries
-- [ ] Docker containerization
-- [ ] RESTful API endpoint (FastAPI)
-
----
