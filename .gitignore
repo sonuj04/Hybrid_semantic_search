@@ -1,20 +1,25 @@
-# Python virtual environment
+# Virtual environment
 venv/
-.venv/
+.env/
+.env
 
-# Python cache files
+# Python cache
 __pycache__/
 *.pyc
 
-# Jupyter Notebook checkpoints
+# Jupyter
 .ipynb_checkpoints/
-
-# Secrets & certificates
-certs/
-.env
-
-# VS Code settings
-.vscode/
 
 # OS files
 .DS_Store
+
+# Logs
+*.log
+
+# Model / data artifacts
+*.npy
+*.pkl
+
+# Elasticsearch / embeddings output
+data/
+indexes/

@@ -40,8 +40,7 @@ def search(input_keyword,gender_filter,max_price):
 
     start_time = time.time()    
     
-    if model is None:
-        model = load_embedding_model()
+    model = load_embedding_model()
     vector_of_input_keyword = model.encode(
         input_keyword,
         normalize_embeddings=True
