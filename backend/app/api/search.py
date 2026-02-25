@@ -4,6 +4,7 @@ import time
 from app.core.elastic import get_es_client
 from app.core.model import get_embedding_model
 from app.schemas.search import SearchRequest, SearchResponse
+from app.core.model import get_embedding_model, get_cross_encoder
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -59,7 +60,7 @@ def search(req: SearchRequest):
         knn={
             "field": "DescriptionVector",
             "query_vector": query_vector,
-            "k": 10,
+            "k": 100,
             "num_candidates": 1000
         },
         _source=[
@@ -70,6 +71,24 @@ def search(req: SearchRequest):
             "Description"
         ]
     )
+    hits = res["hits"]["hits"]
+    cross_encoder = get_cross_encoder()
+
+    pairs = [
+        (req.query, hit["_source"]["Description"])
+        for hit in hits
+    ]
+
+    scores = cross_encoder.predict(pairs)
+
+    # Attach scores
+    scored_hits = list(zip(hits, scores))
+
+    # Sort by cross-encoder score (descending)
+    scored_hits.sort(key=lambda x: x[1], reverse=True)
+
+    # Take top 10
+    top_hits = [hit for hit, _ in scored_hits[:10]]
 
     latency_ms = (time.time() - start_time) * 1000
 
@@ -81,9 +100,8 @@ def search(req: SearchRequest):
             "Price": hit["_source"]["Price (INR)"],
             "Description": hit["_source"]["Description"],
         }
-        for hit in res["hits"]["hits"]
+        for hit in top_hits
     ]
-
     return {
         "results": results,
         "latency_ms": latency_ms
