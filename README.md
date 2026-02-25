@@ -1,12 +1,15 @@
 # Semantic Search Engine 
 
-A semantic search engine that retrieves relevant products based on meaning rather than just exact keyword matches. Traditional keyword search fails when users describe products differently than how they're listed. This engine uses Hybrid BM25 + kNN retrieval with smart filter first architecture for somewhat production scale performance.
+A semantic search engine that retrieves relevant products based on meaning rather than just exact keyword matches. 
+
+Traditional keyword search fails when users describe products differently than how they're listed. This engine uses Hybrid BM25 + kNN retrieval with smart filter first architecture for production scale performance.
 
 ## Tech Stack
 - Python
 - FastAPI
 - Elasticsearch 8.x
 - SentenceTransformers
+- CrossEncoder 
 - Streamlit
 - Pydantic
 - Uvicorn
@@ -15,12 +18,17 @@ A semantic search engine that retrieves relevant products based on meaning rathe
 - SBERT embeddings capture meaning, not just keywords
 - Offline indexing + real time retrieval
 - Combines exact matching with vector similarity.
+- Cross-Encoder reranking for precision boost
 - Secure credential handling using environment variables
 - Efficient querying on large datasets
 - Clean FastAPI REST API
 - Modular Architecture with separation of concerns
 
-
+## Performance considerations
+- Embeddings normalized for cosine similarity optimization
+- Filter first reduces search space
+- Cross encoder applied to top 100 retrieved candidates to control latency
+- Offline embedding generation (only once needed)
 
 ## Architecture
 
@@ -34,7 +42,7 @@ A semantic search engine that retrieves relevant products based on meaning rathe
 │              Backend(fastAPI API Layer)               │
 │                                                       │
 │search logic + embedding model + elasticsearch client  │
-│                                                       │
+│  Cross encoder reranking of 100 retrieved products    │
 └───────────────────────────────────────────────────────┘
                               ↓
 ┌───────────────────────────────────────────────────────┐
@@ -51,19 +59,24 @@ A semantic search engine that retrieves relevant products based on meaning rathe
 
 ## Setup
 
-# Clone Repository
+### Clone Repository
 ```bash
 git clone https://github.com/sonuj04/Private-Proj.git
 cd semantic_search
 ```
+### Create venv
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-
-# Install Dependencies
+### Install Dependencies
 ```
 cd backend
 pip install -r requirements.txt
 cd ../frontend
 pip install -r requirements.txt
+cd ..
 ```
 
 ## Configuration
