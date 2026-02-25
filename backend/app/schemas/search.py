@@ -15,7 +15,11 @@ class Product(BaseModel):
     Price: int
     Description: str
 
-
+class LatencyBreakdown(BaseModel):
+    total: float
+    encoding: float
+    retrieval: float
+    reranking: float
 class SearchResponse(BaseModel):
-    results: List[Product]
-    latency_ms: float
+    results: List[dict]
+    latency_ms: LatencyBreakdown

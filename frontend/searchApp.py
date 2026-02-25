@@ -87,9 +87,19 @@ if st.button("Search", type="primary"):
             else:
                 data = response.json()
                 results = data.get("results", [])
-                latency = data.get("latency_ms", 0)
+                latency = data.get("latency_ms", {})
 
-                st.caption(f"Search time: {latency:.2f} ms")
+                total = latency.get("total", 0)
+                encoding = latency.get("encoding", 0)
+                retrieval = latency.get("retrieval", 0)
+                reranking = latency.get("reranking", 0)
+
+                st.metric("Total Search Time (ms)", f"{total:.2f}")
+
+                with st.expander("Latency Breakdown"):
+                    st.write(f"Encoding: {encoding:.2f} ms")
+                    st.write(f"Retrieval (Elastic): {retrieval:.2f} ms")
+                    st.write(f"Cross-Encoder Reranking: {reranking:.2f} ms")
 
                 if not results:
                     st.warning("No results found.")

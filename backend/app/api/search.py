@@ -11,16 +11,17 @@ router = APIRouter(prefix="/search", tags=["search"])
 
 @router.post("", response_model=SearchResponse)
 def search(req: SearchRequest):
-    start_time = time.time()
+    start_total = time.perf_counter()
 
     es = get_es_client()
     model = get_embedding_model()
-
+    start=time.perf_counter()
     # Encode query
     query_vector = model.encode(
         req.query,
         normalize_embeddings=True
     )
+    encoding_time = (time.perf_counter() - start)
 
     # Build filters
     filters = []
@@ -35,7 +36,7 @@ def search(req: SearchRequest):
             }
         }
     })
-
+    start=time.perf_counter()
     # Hybrid search
     res = es.search(
         index="all_products",
@@ -71,26 +72,26 @@ def search(req: SearchRequest):
             "Description"
         ]
     )
+    retrieval_time = (time.perf_counter() - start)
     hits = res["hits"]["hits"]
-    cross_encoder = get_cross_encoder()
 
+
+    cross_encoder = get_cross_encoder()
+    start = time.perf_counter()
     pairs = [
         (req.query, hit["_source"]["Description"])
         for hit in hits
     ]
 
     scores = cross_encoder.predict(pairs)
+    rerank_time = (time.perf_counter() - start)
 
-    # Attach scores
     scored_hits = list(zip(hits, scores))
 
-    # Sort by cross-encoder score (descending)
     scored_hits.sort(key=lambda x: x[1], reverse=True)
-
-    # Take top 10
     top_hits = [hit for hit, _ in scored_hits[:10]]
 
-    latency_ms = (time.time() - start_time) * 1000
+    total_time= [hit for hit, _ in scored_hits[:10]]
 
     results = [
         {
@@ -104,5 +105,10 @@ def search(req: SearchRequest):
     ]
     return {
         "results": results,
-        "latency_ms": latency_ms
+        "latency_ms": {
+            "total": round((time.perf_counter() - start_total) * 1000, 2),
+            "encoding": round(encoding_time * 1000, 2),
+            "retrieval": round(retrieval_time * 1000, 2),
+            "reranking": round(rerank_time * 1000, 2),
+        }
     }
