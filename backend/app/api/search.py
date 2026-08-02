@@ -20,7 +20,7 @@ def search(req: SearchRequest):
     query_vector = model.encode(
         req.query,
         normalize_embeddings=True
-    )
+    ).tolist()
     encoding_time = (time.perf_counter() - start)
 
     # Build filters
