@@ -6,6 +6,27 @@ from app.core.model import get_embedding_model
 from app.schemas.search import SearchRequest, SearchResponse
 from app.core.model import get_embedding_model, get_cross_encoder
 
+
+def reciprocal_rank_fusion(bm25_hits, knn_hits, k: int = 60):
+    """
+    Combines two ranked result lists using Reciprocal Rank Fusion.
+    """
+    scores: dict[str, float] = {}
+    docs: dict[str, dict] = {}
+
+    for rank, hit in enumerate(bm25_hits):
+        doc_id = hit["_id"]
+        scores[doc_id] = scores.get(doc_id, 0) + 1.0 / (k + rank + 1)
+        docs[doc_id] = hit
+
+    for rank, hit in enumerate(knn_hits):
+        doc_id = hit["_id"]
+        scores[doc_id] = scores.get(doc_id, 0) + 1.0 / (k + rank + 1)
+        docs[doc_id] = hit
+
+    ranked_ids = sorted(scores, key=scores.get, reverse=True)
+    return [docs[doc_id] for doc_id in ranked_ids]
+
 router = APIRouter(prefix="/search", tags=["search"])
 
 
@@ -37,8 +58,8 @@ def search(req: SearchRequest):
         }
     })
     start=time.perf_counter()
-    # Hybrid search
-    res = es.search(
+    # Hybrid search (rrf combines bm25+knn rankings instead of summing raw scores (which lets bm25 dominate since its scores are unbounded while knn is 0-1))
+    bm25_res = es.search(
         index="all_products",
         query={
             "bool": {
@@ -58,12 +79,26 @@ def search(req: SearchRequest):
                 "filter": filters
             }
         },
+        size=100,
+        _source=[
+            "ProductName",
+            "ProductBrand",
+            "Gender",
+            "Price (INR)",
+            "Description"
+        ]
+    )
+
+    knn_res = es.search(
+        index="all_products",
         knn={
             "field": "DescriptionVector",
             "query_vector": query_vector,
             "k": 100,
-            "num_candidates": 1000
+            "num_candidates": 1000,
+            "filter": filters
         },
+        size=100,
         _source=[
             "ProductName",
             "ProductBrand",
@@ -73,15 +108,15 @@ def search(req: SearchRequest):
         ]
     )
     retrieval_time = (time.perf_counter() - start)
-    hits = res["hits"]["hits"]
+    hits = reciprocal_rank_fusion(bm25_res["hits"]["hits"], knn_res["hits"]["hits"])
 
 
     cross_encoder = get_cross_encoder()
     start = time.perf_counter()
     pairs = [
-        (req.query, hit["_source"]["Description"])
-        for hit in hits
-    ]
+    (req.query, f"{hit['_source']['ProductName']}. {hit['_source']['Description']}")
+    for hit in hits
+]
 
     scores = cross_encoder.predict(pairs)
     rerank_time = (time.perf_counter() - start)
@@ -91,7 +126,6 @@ def search(req: SearchRequest):
     scored_hits.sort(key=lambda x: x[1], reverse=True)
     top_hits = [hit for hit, _ in scored_hits[:10]]
 
-    total_time= [hit for hit, _ in scored_hits[:10]]
 
     results = [
         {
